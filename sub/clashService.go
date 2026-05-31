@@ -291,21 +291,35 @@ func (s *ClashService) ConvertToClashMeta(outbounds *[]map[string]interface{}, b
 					proxy["http-opts"] = map[string]interface{}{"path": []interface{}{httpOpts["path"]}, "host": httpOpts["host"]}
 				}
 			case "ws", "httpupgrade":
-				proxy["network"] = "ws"
-				wsOpts := make(map[string]interface{})
-				if path, ok := transport["path"].(string); ok {
-					wsOpts["path"] = path
-				}
-				if headers, ok := transport["headers"].([]interface{}); ok {
-					wsOpts["headers"] = headers
-				}
-				if ed, ok := transport["early_data_header_name"].(string); ok {
-					wsOpts["early-data-header-name"] = ed
-				}
-				if tt == "httpupgrade" {
-					wsOpts["v2ray-http-upgrade"] = true
-				}
-				proxy["ws-opts"] = wsOpts
+			    proxy["network"] = "ws"
+			    wsOpts := make(map[string]interface{})
+			    if path, ok := transport["path"].(string); ok {
+			        wsOpts["path"] = path
+			    }
+			    // ★ 关键修复：把 headers 数组转换成 Clash 需要的 map 格式
+			    if headers, ok := transport["headers"].([]interface{}); ok && len(headers) > 0 {
+			        headerMap := make(map[string]interface{})
+			        for _, h := range headers {
+			            if host, ok := h.(string); ok {
+			                headerMap["Host"] = host
+			                break
+			            } else if m, ok := h.(map[string]interface{}); ok {
+			                for k, v := range m {
+			                    headerMap[k] = v
+			                }
+			            }
+			        }
+			        if len(headerMap) > 0 {
+			            wsOpts["headers"] = headerMap
+			        }
+			    }
+			    if ed, ok := transport["early_data_header_name"].(string); ok {
+			        wsOpts["early-data-header-name"] = ed
+			    }
+			    if tt == "httpupgrade" {
+			        wsOpts["v2ray-http-upgrade"] = true
+			    }
+			    proxy["ws-opts"] = wsOpts
 			case "grpc":
 				proxy["network"] = "grpc"
 				grpcOpts := make(map[string]interface{})
