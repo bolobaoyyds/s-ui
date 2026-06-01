@@ -290,36 +290,31 @@ func (s *ClashService) ConvertToClashMeta(outbounds *[]map[string]interface{}, b
 					proxy["network"] = "http"
 					proxy["http-opts"] = map[string]interface{}{"path": []interface{}{httpOpts["path"]}, "host": httpOpts["host"]}
 				}
-			case "ws", "httpupgrade":
+			case "ws":
 			    proxy["network"] = "ws"
-			    wsOpts := make(map[string]interface{})
-			    if path, ok := transport["path"].(string); ok {
-			        wsOpts["path"] = path
-			    }
-			    // ★ 关键修复：把 headers 数组转换成 Clash 需要的 map 格式
-			    if headers, ok := transport["headers"].([]interface{}); ok && len(headers) > 0 {
-			        headerMap := make(map[string]interface{})
-			        for _, h := range headers {
-			            if host, ok := h.(string); ok {
-			                headerMap["Host"] = host
-			                break
-			            } else if m, ok := h.(map[string]interface{}); ok {
-			                for k, v := range m {
-			                    headerMap[k] = v
-			                }
+			    ws, _ := stream["wsSettings"].(map[string]any)
+			    wsOpts := map[string]any{}
+			    if ws != nil {
+			        if path, ok := ws["path"].(string); ok && path != "" {
+			            wsOpts["path"] = path
+			        }
+			        host := ""
+			        if v, ok := ws["host"].(string); ok && v != "" {
+			            host = v
+			        } else if headers, ok := ws["headers"].(map[string]any); ok {
+			            if h, ok := headers["Host"].(string); ok {
+			                host = h
 			            }
 			        }
-			        if len(headerMap) > 0 {
-			            wsOpts["headers"] = headerMap
+			        if host != "" {
+			            wsOpts["headers"] = map[string]any{
+			                "Host": host,
+			            }
 			        }
 			    }
-			    if ed, ok := transport["early_data_header_name"].(string); ok {
-			        wsOpts["early-data-header-name"] = ed
+			    if len(wsOpts) > 0 {
+			        proxy["ws-opts"] = wsOpts
 			    }
-			    if tt == "httpupgrade" {
-			        wsOpts["v2ray-http-upgrade"] = true
-			    }
-			    proxy["ws-opts"] = wsOpts
 			case "grpc":
 				proxy["network"] = "grpc"
 				grpcOpts := make(map[string]interface{})
