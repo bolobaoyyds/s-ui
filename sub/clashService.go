@@ -292,29 +292,37 @@ func (s *ClashService) ConvertToClashMeta(outbounds *[]map[string]interface{}, b
 				}
 			case "ws":
 			    proxy["network"] = "ws"
-			    ws, _ := stream["wsSettings"].(map[string]any)
-			    wsOpts := map[string]any{}
-			    if ws != nil {
-			        if path, ok := ws["path"].(string); ok && path != "" {
+			    wsOpts := map[string]interface{}{}
+			    // transport 就是前面已经取出的 transport 配置
+			    if transport != nil {
+			        // path
+			        if path, ok := transport["path"].(string); ok && path != "" {
 			            wsOpts["path"] = path
 			        }
+			        // host
 			        host := ""
-			        if v, ok := ws["host"].(string); ok && v != "" {
+			        if v, ok := transport["host"].(string); ok && v != "" {
 			            host = v
-			        } else if headers, ok := ws["headers"].(map[string]any); ok {
-			            if h, ok := headers["Host"].(string); ok {
-			                host = h
+			        }
+			        if host == "" {
+			            if headers, ok := transport["headers"].(map[string]interface{}); ok {
+			                if h, ok := headers["Host"].(string); ok && h != "" {
+			                    host = h
+			                }
+			                if host == "" {
+			                    if h, ok := headers["host"].(string); ok && h != "" {
+			                        host = h
+			                    }
+			                }
 			            }
 			        }
 			        if host != "" {
-			            wsOpts["headers"] = map[string]any{
+			            wsOpts["headers"] = map[string]interface{}{
 			                "Host": host,
 			            }
 			        }
 			    }
-			    if len(wsOpts) > 0 {
-			        proxy["ws-opts"] = wsOpts
-			    }
+			    proxy["ws-opts"] = wsOpts
 			case "grpc":
 				proxy["network"] = "grpc"
 				grpcOpts := make(map[string]interface{})
